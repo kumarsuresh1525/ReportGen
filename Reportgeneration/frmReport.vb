@@ -97,9 +97,10 @@ Public Class frmReport
         Dim ldtPartDetails As New DataTable
         Dim dr As DataRow
         Dim xsProcess As Excel.Worksheet
-        ldtPartDetails = gfnSelectQueryDt("SELECT DISTINCT pName, pNo, qty, xyz FROM partDetails WHERE pfcName='" + PFC_NAME + "' order by pNo")
+        ldtPartDetails = gfnSelectQueryDt("SELECT DISTINCT pName, pNo, qty, xyz, partNo, partName FROM partDetails WHERE pfcName='" + PFC_NAME + "' order by pNo")
         Dim i, j, k As Integer
         Dim pr_no, flow_sy_type As String
+        saveAllSetting(12)
         For Each dr In ldtPartDetails.Rows
             xsProcess = xlWorkBook.Worksheets("Processes")
             i = 2
@@ -120,7 +121,8 @@ Public Class frmReport
                 Loop
                 If xsProcess.Range("K" & i).Value = pr_no Then
                     lines(k) = 1
-                    makeReact(dr("partNo"), dr("partName"), dr("qty"), dr("xyz"), xsProcess)
+                    getAllSetting()
+                    makeReact(dr("partNo"), dr("partName"), dr("qty"), dr("xyz"), xlWorkSheet)
                     Exit Do
                 End If
                 i = j + 2
