@@ -75,8 +75,8 @@ Public Class frmReport
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
         Dim model = "MRPL"
         Dim startP, EndP As Integer
-        startP = 12
-        EndP = 66
+        startP = DEFAULTPQCSSTARTVALUE
+        EndP = DEFAULTPQCSENDVALUE
         currentSheetNo = 1
         sheetNo = 1
         If (Not System.IO.Directory.Exists(desktop + "\Reports\PQCS")) Then
@@ -142,17 +142,29 @@ Public Class frmReport
                 Loop
                 If xsProcess.Range("K" & i).Value = pr_no Then
                     If flowChart = False Then
-                        lines(k) = 1
+                        For k = 0 To 3
+                            If lines(k) = 0 Then
+                                lines(k) = 1
+                                Exit For
+                            End If
+                        Next
                         getAllSetting()
+                        If start_pos + j - i + 1 >= DEFAULTPQCSENDVALUE Or start_pos + 3 >= DEFAULTPQCSENDVALUE Then
+                            If start_pos < DEFAULTPQCSENDVALUE Then makeLine(start_pos, DEFAULTPQCSENDVALUE - 1, xlWorkSheet)
+                            newSheetName = fnCreateSheet(xlWorkBook, sheetName, currentSheetNo + 1)
+                            xlWorkSheet = xlWorkBook.Worksheets(newSheetName)
+                            saveSettings("currentSheetNo", currentSheetNo + 1)
+                            toBeContinue(xlWorkSheet, dr("pNo"))
+                        End If
                         ldtPartDetailsNew = gfnSelectQueryDt("SELECT * FROM partDetails WHERE pfcName='" + PFC_NAME + "' AND pName='" + dr("pName") + "'")
                         For Each rs In ldtPartDetailsNew.Rows
                             makeReact(rs("partNo"), rs("partName"), rs("qty"), rs("xyz"), xlWorkSheet)
                         Next
                         createFlowChart(flow_sy_type, Convert.ToInt16(dr("pNo")), dr("pName"), xlWorkSheet)
-                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"))
+                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook)
                         flowChart = True
                     Else
-                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"))
+                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook)
                     End If
                 End If
                 i = j + 2
@@ -184,21 +196,42 @@ Public Class frmReport
         xlWorkSheet.Name = sheetName + "_" + no.ToString()
         Return sheetName + "_" + no.ToString()
     End Function
-    Private Sub fillValuesPQCS(ByVal xsPQCS As Excel.Worksheet, ByVal xsPQCSDB As Excel.Worksheet, ByVal i As Integer, ByVal j As Integer, ByVal pNo As Integer)
+    Private Sub fillValuesPQCS(ByVal xsPQCS As Excel.Worksheet, ByVal xsPQCSDB As Excel.Worksheet, ByVal i As Integer, ByVal j As Integer, ByVal pNo As Integer, ByVal xw As Excel.Workbook)
         getAllSetting()
         If last_pos + j - i + 1 >= endSheet Then
             If sheetNo = currentSheetNo Then
-                If last_pos < endSheet Then makeLine(last_pos, 77, xsPQCS)
-                currentSheetNo = fnCreateSheet(xlWorkBook, "P_MRPL", currentSheetNo + 1)
+                If last_pos < endSheet Then makeLine(last_pos, DEFAULTPQCSENDVALUE - 1, xsPQCS)
+                Dim sheetName = fnCreateSheet(xw, "P_MRPL", currentSheetNo + 1)
+                xsPQCS = xw.Worksheets(sheetName)
+                saveSettings("currentSheetNo", currentSheetNo + 1)
+                saveSettings("st_pos", DEFAULTPQCSSTARTVALUE)
+                saveSettings("last_pos", DEFAULTPQCSSTARTVALUE)
+                getAllSetting()
+                toBeContinue(xsPQCS, pNo)
+            Else
+                saveSettings("currentSheetNo", currentSheetNo + 1)
+                saveSettings("last_pos", DEFAULTPQCSSTARTVALUE)
+                getAllSetting()
+                For k = 0 To 3
+                    If lines(k) = 1 Then last_pos = last_pos + 1
+                Next
+                saveSettings("last_pos", last_pos)
+                getAllSetting()
             End If
         End If
 
         xsPQCSDB.Range("O" & i & ":AC" & j).Copy(xsPQCS.Range("P" & last_pos))
         last_pos = last_pos + j - i + 2
-        SaveSetting("last_pos", "last_pos", "last_pos", last_pos)
-        If xsPQCSDB.Range("AF" & i).Value = 1 Then
-
+        If sheetNo = currentSheetNo And last_pos > start_pos Then
+            If True = False Then makeLine(start_pos, last_pos - 1, xsPQCS)
+            start_pos = last_pos
+            saveSettings("st_pos", start_pos)
+            saveSettings("last_pos", last_pos)
         End If
+        saveSettings("last_pos", last_pos)
+        'If xsPQCSDB.Range("AF" & i).Value = 1 Then
+        '    'PCC Here
+        'End If
     End Sub
     Private Sub createDirectory()
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
@@ -701,7 +734,7 @@ Public Class frmReport
             saveSettings("st_pos", start_pos)
         End If
     End Sub
-    Private Sub toBeContinue(ByVal xs As Excel.Worksheet)
+    Private Sub toBeContinue(ByVal xs As Excel.Worksheet, Optional ByVal pno As String = "")
         Dim i, j, k As Integer
         start_pos = start_pos + 3
         i = 1
@@ -736,7 +769,7 @@ Public Class frmReport
                     End With
                 End With
                 makeBorder(xs.Range(Chr(73 - k - 3) & start_pos & ":" & Chr(73 - k) & start_pos), False, True, False, True, False, False)
-                xs.Cells(start_pos - 1, 9 - k - 3) = "CONTD. FROM P.NO." + 10
+                xs.Cells(start_pos - 1, 9 - k - 3) = "CONTD. FROM P.NO." + pno
                 start_pos = start_pos - 1
                 i = i + 1
             Else

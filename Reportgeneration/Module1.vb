@@ -14,6 +14,8 @@ Module Module1
     Dim xlApp As Excel.Application
     Dim xlWorkBook As Excel.Workbook
     Dim xlWorkSheet As Excel.Worksheet
+    Public DEFAULTPQCSSTARTVALUE As Integer = 12
+    Public DEFAULTPQCSENDVALUE As Integer = 66
     Public Function MakeConnection() As Boolean
         Con = New OleDbConnection("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & Application.StartupPath & "\database.mdb")
         Try
