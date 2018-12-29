@@ -12,7 +12,7 @@ Public Class frmReport
     Dim lines(3), p_lines(3) As Integer
     Dim sheetCount As Integer
     Dim sheetCountOGS As Integer = 1
-    Dim start_pos As Integer
+    Dim start_pos, last_pos, endSheet As Integer
     Dim da As New OleDbDataAdapter
     Dim dt As New DataTable
     Dim showMessage As Boolean = False
@@ -35,6 +35,8 @@ Public Class frmReport
     End Sub
     Private Sub getAllSetting()
         start_pos = GetSetting("st_pos", "st_pos", "st_pos")
+        last_pos = GetSetting("last_pos", "last_pos", "last_pos")
+        endSheet = GetSetting("endSheet", "endSheet", "endSheet")
     End Sub
     Private Sub generatePFC()
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
@@ -73,6 +75,9 @@ Public Class frmReport
     Private Sub generatePQCS()
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
         Dim model = "MRPL"
+        Dim startP, EndP As Integer
+        startP = 12
+        EndP = 66
         If (Not System.IO.Directory.Exists(desktop + "\Reports\PQCS")) Then
             System.IO.Directory.CreateDirectory(desktop + "\Reports\PQCS")
         Else
@@ -80,11 +85,18 @@ Public Class frmReport
                 My.Computer.FileSystem.DeleteFile(desktop + "\Reports\PQCS\PQCS.xlsx")
                 My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\" + "PQCS_" + model + ".xlsx",
                                             desktop + "\Reports\PQCS\PQCS.xlsx")
-                createPQCS(Application.StartupPath + "\db.xlsx", "P_MRPL", 12, 66)
+
+                SaveSetting("st_pos", "st_pos", "st_pos", startP)
+                SaveSetting("last_pos", "last_pos", "last_pos", startP)
+                SaveSetting("endSheet", "endSheet", "endSheet", EndP)
+                createPQCS(Application.StartupPath + "\db.xlsx", "P_MRPL", startP, EndP)
             Else
                 My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\" + "PQCS_" + model + ".xlsx",
                                             desktop + "\Reports\PQCS\PQCS.xlsx")
-                createPQCS(Application.StartupPath + "\db.xlsx", "P_MRPL", 12, 66)
+                SaveSetting("st_pos", "st_pos", "st_pos", startP)
+                SaveSetting("last_pos", "last_pos", "last_pos", startP)
+                SaveSetting("endSheet", "endSheet", "endSheet", EndP)
+                createPQCS(Application.StartupPath + "\db.xlsx", "P_MRPL", startP, EndP)
             End If
         End If
     End Sub
@@ -95,12 +107,12 @@ Public Class frmReport
         xlWorkSheet = xlWorkBook.Worksheets(newSheetName)
 
         Dim ldtPartDetails As New DataTable
-        Dim dr As DataRow
+        Dim ldtPartDetailsNew As New DataTable
+        Dim dr, rs As DataRow
         Dim xsProcess As Excel.Worksheet
-        ldtPartDetails = gfnSelectQueryDt("SELECT DISTINCT pName, pNo, qty, xyz, partNo, partName FROM partDetails WHERE pfcName='" + PFC_NAME + "' order by pNo")
+        ldtPartDetails = gfnSelectQueryDt("SELECT DISTINCT pName, pNo FROM partDetails WHERE pfcName='" + PFC_NAME + "' order by pNo")
         Dim i, j, k As Integer
         Dim pr_no, flow_sy_type As String
-        saveAllSetting(12)
         For Each dr In ldtPartDetails.Rows
             xsProcess = xlWorkBook.Worksheets("Processes")
             i = 2
@@ -122,7 +134,12 @@ Public Class frmReport
                 If xsProcess.Range("K" & i).Value = pr_no Then
                     lines(k) = 1
                     getAllSetting()
-                    makeReact(dr("partNo"), dr("partName"), dr("qty"), dr("xyz"), xlWorkSheet)
+                    ldtPartDetailsNew = gfnSelectQueryDt("SELECT * FROM partDetails WHERE pfcName='" + PFC_NAME + "' AND pName='" + dr("pName") + "'")
+                    For Each rs In ldtPartDetailsNew.Rows
+                        makeReact(rs("partNo"), rs("partName"), rs("qty"), rs("xyz"), xlWorkSheet)
+                    Next
+                    createFlowChart(flow_sy_type, Convert.ToInt16(dr("pNo")), dr("pName"), xlWorkSheet)
+                    fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"))
                     Exit Do
                 End If
                 i = j + 2
@@ -154,6 +171,14 @@ Public Class frmReport
         xlWorkSheet.Name = sheetName + "_" + no.ToString()
         Return sheetName + "_" + no.ToString()
     End Function
+    Private Sub fillValuesPQCS(ByVal xsPQCS As Excel.Worksheet, ByVal xsPQCSDB As Excel.Worksheet, ByVal i As Integer, ByVal j As Integer, ByVal pNo As Integer)
+        getAllSetting()
+        If last_pos + j - i + 1 >= endSheet Then
+
+        End If
+
+        xsPQCSDB.Range("O" & i & ":AC" & j).Copy(xsPQCS.Range("P12"))
+    End Sub
     Private Sub createDirectory()
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
         If (Not System.IO.Directory.Exists(desktop + "\" + "Reports")) Then
