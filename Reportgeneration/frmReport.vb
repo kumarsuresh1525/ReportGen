@@ -8,6 +8,7 @@ Public Class frmReport
     Dim xlApp As Excel.Application
     Dim xlWorkBook As Excel.Workbook
     Dim xlWorkSheet As Excel.Worksheet
+    Dim xsInfo As Excel.Worksheet
     Dim start_sheet As Integer
     Dim lines(3), p_lines(3) As Integer
     Dim sheetCount As Integer
@@ -30,6 +31,8 @@ Public Class frmReport
     Dim processNoNode, processNameNode As String
     Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + fileSource + "';Extended Properties = ""Excel 12.0 Xml;HDR=YES"""
     Dim PFC_NAME, REV_NO, PartNo As String
+    Dim PROCESS_NO As String = ""
+    Dim LAST_PROCESS As String
     Private Sub getAllSetting()
         start_pos = GetSetting("st_pos", "st_pos", "st_pos")
         last_pos = GetSetting("last_pos", "last_pos", "last_pos")
@@ -54,54 +57,54 @@ Public Class frmReport
             End If
         End If
     End Sub
-    Private Sub generatePCC()
-        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
-        If (Not System.IO.Directory.Exists(desktop + "\Reports\PCC")) Then
-            System.IO.Directory.CreateDirectory(desktop + "\Reports\PCC")
-        Else
-            If (System.IO.File.Exists(desktop + "\Reports\PCC\PCC.xlsx")) Then
-                My.Computer.FileSystem.DeleteFile(desktop + "\Reports\PCC\PCC.xlsx")
-                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCC.xlsx",
-                                            desktop + "\Reports\PCC\PCC.xlsx")
-                makePCC(desktop + "\Reports\PCC\PCC.xlsx", "PCC")
-            Else
-                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCC.xlsx",
-                                            desktop + "\Reports\PCC\PCC.xlsx")
-                makePCC(desktop + "\Reports\PCC\PCC.xlsx", "PCC")
-            End If
-        End If
-    End Sub
+    'Private Sub generatePCC()
+    '    Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+    '    If (Not System.IO.Directory.Exists(desktop + "\Reports\PCC")) Then
+    '        System.IO.Directory.CreateDirectory(desktop + "\Reports\PCC")
+    '    Else
+    '        If (System.IO.File.Exists(desktop + "\Reports\PCC\PCC.xlsx")) Then
+    '            My.Computer.FileSystem.DeleteFile(desktop + "\Reports\PCC\PCC.xlsx")
+    '            My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCC.xlsx",
+    '                                        desktop + "\Reports\PCC\PCC.xlsx")
+    '            makePCC(desktop + "\Reports\PCC\PCC.xlsx", "PCC")
+    '        Else
+    '            My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCC.xlsx",
+    '                                        desktop + "\Reports\PCC\PCC.xlsx")
+    '            makePCC(desktop + "\Reports\PCC\PCC.xlsx", "PCC")
+    '        End If
+    '    End If
+    'End Sub
     Private Sub generatePQCS()
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
         Dim model = "MRPL"
         Dim startP, EndP As Integer
         startP = DEFAULTPQCSSTARTVALUE
-        EndP = DEFAULTPQCSENDVALUE
+        EndP = DEFAULTPQCSSTARTVALUE
         currentSheetNo = 1
         sheetNo = 1
         If (Not System.IO.Directory.Exists(desktop + "\Reports\PQCS")) Then
             System.IO.Directory.CreateDirectory(desktop + "\Reports\PQCS")
         Else
-            If (System.IO.File.Exists(desktop + "\Reports\PQCS\PQCS.xlsx")) Then
-                My.Computer.FileSystem.DeleteFile(desktop + "\Reports\PQCS\PQCS.xlsx")
-                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\" + "PQCS_" + model + ".xlsx",
-                                            desktop + "\Reports\PQCS\PQCS.xlsx")
+            If (System.IO.File.Exists(desktop + "\Reports\db.xlsx")) Then
+                My.Computer.FileSystem.DeleteFile(desktop + "\Reports\db.xlsx")
+                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\db.xlsx",
+                                            desktop + "\Reports\db.xlsx")
                 saveSettings("st_pos", startP)
                 saveSettings("last_pos", startP)
                 saveSettings("endSheet", EndP)
                 saveSettings("currentSheetNo", currentSheetNo)
                 saveSettings("sheetNo", sheetNo)
                 getAllSetting()
-                createPQCS(Application.StartupPath + "\db.xlsx", "P_MRPL", startP, EndP)
+                createPQCS(desktop + "\Reports\db.xlsx", "P_MRPL", startP, EndP)
             Else
-                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\" + "PQCS_" + model + ".xlsx",
-                                            desktop + "\Reports\PQCS\PQCS.xlsx")
+                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\db.xlsx",
+                                            desktop + "\Reports\db.xlsx")
                 saveSettings("st_pos", startP)
                 saveSettings("last_pos", startP)
                 saveSettings("endSheet", EndP)
                 saveSettings("currentSheetNo", currentSheetNo)
                 getAllSetting()
-                createPQCS(Application.StartupPath + "\db.xlsx", "P_MRPL", startP, EndP)
+                createPQCS(desktop + "\Reports\db.xlsx", "P_MRPL", startP, EndP)
             End If
         End If
     End Sub
@@ -118,6 +121,7 @@ Public Class frmReport
         Dim ldtPartDetailsNew As New DataTable
         Dim dr, rs As DataRow
         Dim xsProcess As Excel.Worksheet
+        xsInfo = xlWorkBook.Worksheets("INFO")
         ldtPartDetails = gfnSelectQueryDt("SELECT DISTINCT pName, pNo FROM partDetails WHERE pfcName='" + PFC_NAME + "' order by pNo")
         Dim i, j, k As Integer
         Dim pr_no, flow_sy_type As String
@@ -125,7 +129,7 @@ Public Class frmReport
             xsProcess = xlWorkBook.Worksheets("Processes")
             i = 2
             Do While Len(xsProcess.Range("A" & i).Value) <> 0
-                If xsProcess.Range("E" & i).Value = dr("pName") Then
+                If Trim(xsProcess.Range("E" & i).Value) = Trim(dr("pName")) Then
                     pr_no = xsProcess.Range("A" & i).Value
                     flow_sy_type = xsProcess.Range("F" & i).Value
                     Exit Do
@@ -142,12 +146,13 @@ Public Class frmReport
                 Loop
                 If xsProcess.Range("K" & i).Value = pr_no Then
                     If flowChart = False Then
-                        For k = 0 To 3
-                            If lines(k) = 0 Then
-                                lines(k) = 1
-                                Exit For
-                            End If
-                        Next
+                        'For k = 0 To 3
+                        '    If lines(k) = 0 Then
+                        '        lines(k) = 1
+                        '        Exit For
+                        '    End If
+                        'Next
+                        lines(k) = 1
                         getAllSetting()
                         If start_pos + j - i + 1 >= DEFAULTPQCSENDVALUE Or start_pos + 3 >= DEFAULTPQCSENDVALUE Then
                             If start_pos < DEFAULTPQCSENDVALUE Then makeLine(start_pos, DEFAULTPQCSENDVALUE - 1, xlWorkSheet)
@@ -156,21 +161,30 @@ Public Class frmReport
                             saveSettings("currentSheetNo", currentSheetNo + 1)
                             toBeContinue(xlWorkSheet, dr("pNo"))
                         End If
+                        last_pos = start_pos
+                        saveSettings("last_pos", last_pos)
+                        getAllSetting()
+                        xlWorkSheet = xlWorkBook.Worksheets(sheetName & "_" & currentSheetNo)
                         ldtPartDetailsNew = gfnSelectQueryDt("SELECT * FROM partDetails WHERE pfcName='" + PFC_NAME + "' AND pName='" + dr("pName") + "'")
                         For Each rs In ldtPartDetailsNew.Rows
-                            makeReact(rs("partNo"), rs("partName"), rs("qty"), rs("xyz"), xlWorkSheet)
+                            makeReact(rs("partNo"), rs("partName"), rs("qty"), rs("xyz"), xlWorkSheet, xlWorkBook, dr("pNo"))
                         Next
-                        createFlowChart(flow_sy_type, Convert.ToInt16(dr("pNo")), dr("pName"), xlWorkSheet)
+                        createFlowChart(flow_sy_type, Convert.ToInt16(dr("pNo")), dr("pName"), xlWorkSheet, xlWorkBook)
                         fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook)
                         flowChart = True
                     Else
+                        'xlWorkSheet = xlWorkBook.Worksheets(sheetName & "_" & currentSheetNo)
                         fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook)
                     End If
                 End If
                 i = j + 2
             Loop
         Next
-
+        xlWorkBook.Application.DisplayAlerts = False
+        'xlWorkBook.Sheets("INFO").Delete
+        xlWorkBook.Sheets("Processes").Delete
+        xlWorkBook.Sheets("PQCS_DB").Delete
+        xlWorkBook.Application.DisplayAlerts = True
         xlWorkBook.Save()
         xlWorkBook.Close() : xlApp.Quit()
 
@@ -198,18 +212,21 @@ Public Class frmReport
     End Function
     Private Sub fillValuesPQCS(ByVal xsPQCS As Excel.Worksheet, ByVal xsPQCSDB As Excel.Worksheet, ByVal i As Integer, ByVal j As Integer, ByVal pNo As Integer, ByVal xw As Excel.Workbook)
         getAllSetting()
-        If last_pos + j - i + 1 >= endSheet Then
+        Dim defaultSheetName As String = "P_MRPL"
+        If last_pos + j - i + 1 >= DEFAULTPQCSENDVALUE Then
             If sheetNo = currentSheetNo Then
-                If last_pos < endSheet Then makeLine(last_pos, DEFAULTPQCSENDVALUE - 1, xsPQCS)
-                Dim sheetName = fnCreateSheet(xw, "P_MRPL", currentSheetNo + 1)
+                If last_pos < DEFAULTPQCSENDVALUE Then makeLine(last_pos, DEFAULTPQCSENDVALUE - 1, xsPQCS)
+                Dim sheetName = fnCreateSheet(xw, defaultSheetName, currentSheetNo + 1)
                 xsPQCS = xw.Worksheets(sheetName)
                 saveSettings("currentSheetNo", currentSheetNo + 1)
+                saveSettings("sheetNo", currentSheetNo + 1)
                 saveSettings("st_pos", DEFAULTPQCSSTARTVALUE)
                 saveSettings("last_pos", DEFAULTPQCSSTARTVALUE)
                 getAllSetting()
                 toBeContinue(xsPQCS, pNo)
             Else
                 saveSettings("currentSheetNo", currentSheetNo + 1)
+                saveSettings("sheetNo", currentSheetNo + 1)
                 saveSettings("last_pos", DEFAULTPQCSSTARTVALUE)
                 getAllSetting()
                 For k = 0 To 3
@@ -219,18 +236,101 @@ Public Class frmReport
                 getAllSetting()
             End If
         End If
-
+        xsPQCS = xw.Worksheets(defaultSheetName & "_" & currentSheetNo)
         xsPQCSDB.Range("O" & i & ":AC" & j).Copy(xsPQCS.Range("P" & last_pos))
+        If xsPQCSDB.Range("AA" & last_pos).Value = "KAKOTORA " Then
+            createKakoTora()
+        End If
         last_pos = last_pos + j - i + 2
+
         If sheetNo = currentSheetNo And last_pos > start_pos Then
             If True = False Then makeLine(start_pos, last_pos - 1, xsPQCS)
             start_pos = last_pos
-            saveSettings("st_pos", start_pos)
-            saveSettings("last_pos", last_pos)
+            saveSettings("last_pos", start_pos)
         End If
         saveSettings("last_pos", last_pos)
-        'If xsPQCSDB.Range("AF" & i).Value = 1 Then
-        '    'PCC Here
+        getAllSetting()
+        If xsPQCSDB.Range("AF" & i).Value = 1 Then
+            'PCC Here
+            genPCC(xsPQCSDB.Range("AH" & i).Value, "", "", "", xsPQCSDB.Range("AI" & i).Value, xsPQCSDB.Range("AJ" & i).Value, xsPQCSDB.Range("AG" & i).Value, 1, xw, pNo)
+        End If
+
+    End Sub
+    Private Sub genPCC(TXT1 As String, TXT2 As String, TXT3 As String, TXT4 As String, TXT5 As String, TXT6 As String, Optional PO As Integer = 1, Optional MER As Integer = 1, Optional xw As Excel.Workbook = Nothing, Optional lPno As Integer = 0)
+        Dim pcc_file_name As String
+        Dim current_sheet As Integer
+        Dim BASE As Integer, offset_val As Integer
+        Dim xsPCC As Excel.Worksheet
+        If xsInfo.Cells(12, 7).Value > xsInfo.Cells(13, 7).Value Then
+            current_sheet = xsInfo.Cells(12, 7).Value
+        Else
+            current_sheet = xsInfo.Cells(13, 7).Value
+        End If
+        If xsInfo.Cells(12 + PO, 6).Value > 4 Then
+            If current_sheet = xsInfo.Cells(12 + PO, 7).Value Then
+                If current_sheet > 0 Then
+                    Dim result As String = String.Join(",", PROCESS_NO.Split(",").Distinct().ToArray())
+                    xsPCC = xw.Worksheets("PCC_" & currentSheetNo)
+                    xsPCC.Range("C7").Value = result
+                    PROCESS_NO = ""
+                End If
+                Dim sheetName = fnCreateSheet(xw, "PCC", current_sheet + 1)
+                xsPCC = xw.Worksheets(sheetName)
+                xsInfo.Cells(12 + PO, 7).Value = current_sheet + 1
+                current_sheet = xsInfo.Cells(12 + PO, 7).Value
+                xsInfo.Cells(9, 6).Value = xsInfo.Cells(12 + PO, 7).Value
+                pcc_file_name = "PCC_" & current_sheet
+                xsInfo.Cells(12 + PO, 6).Value = 0
+            Else
+                xsInfo.Cells(12 + PO, 7).Value = xsInfo.Cells(12 + PO, 7).Value + 1
+                current_sheet = xsInfo.Cells(12 + PO, 7).Value
+                pcc_file_name = "PCC_" & current_sheet
+                xsInfo.Cells(12 + PO, 6).Value = 0
+            End If
+        Else
+            current_sheet = xsInfo.Cells(12 + PO, 7).Value
+            pcc_file_name = "PCC_" & current_sheet
+        End If
+        PROCESS_NO = PROCESS_NO & lPno & ","
+        BASE = xsInfo.Cells(12 + PO, 5).Value
+        offset_val = xsInfo.Cells(12 + PO, 6).Value
+        xsInfo.Cells(12 + PO, 6).Value = xsInfo.Cells(12 + PO, 6).Value + 1
+
+        If MER = 0 Then
+            xsPCC = xw.Worksheets(pcc_file_name)
+            xsPCC.Cells(6, BASE + offset_val).Value = TXT1
+            xsPCC.Cells(4, BASE + offset_val).Value = TXT2
+            xsPCC.Cells(4, BASE + offset_val).Value = TXT3
+            xsPCC.Cells(3, BASE + offset_val).Value = TXT4
+        Else
+            xsPCC = xw.Worksheets(pcc_file_name)
+            With xsPCC.Range(Chr(64 + BASE + offset_val) & 3 & ":" & Chr(64 + BASE + offset_val) & 7)
+                .HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
+                .WrapText = True
+                .Orientation = 90
+                .AddIndent = False
+                .ShrinkToFit = False
+                .MergeCells = True
+            End With
+            xsPCC.Cells(3, BASE + offset_val).Value = TXT1 & "(" & lPno & ")"
+        End If
+        xsPCC = xw.Worksheets(pcc_file_name)
+        xsPCC.Cells(8, BASE + offset_val).Value = TXT5 & "            " & TXT6
+        xsPCC.Range("E5").Value = REV_NO
+        xsPCC.Range("S1").Value = current_sheet
+        xsPCC.Range("Q3").Value = "ASSY"
+        xsPCC.Range("D1").Value = "MRPL"
+        'xsPCC.Cells(3, 1).Value = Sheets("BOM").Cells(1, 3).Value
+        'xsPCC.Cells(5, 1).Value = Sheets("BOM").Cells(2, 3).Value
+        Dim lflagPCC As Boolean
+        'If pcc_file_name = "PCC_2" And mflagPCC = True And lflagPCC = False Then
+        '    mflagPCC = False
+        '    lflagPCC = True
+        'End If
+        'If mflagPCC = False Then
+        '    Worksheets(pcc_file_name).Cells(6, 3).Value = process_name & "," & Worksheets(pcc_file_name).Cells(6, 3).Value
+        '    Worksheets(pcc_file_name).Cells(7, 3).Value = Worksheets(pcc_file_name).Cells(7, 3).Value & "," & txtProcessNo.Text
+        '    mflagPCC = True
         'End If
     End Sub
     Private Sub createDirectory()
@@ -245,41 +345,7 @@ Public Class frmReport
         xlWorkSheet.Copy(, xlWorkSheet)
         xlWorkSheet.Visible = False
     End Sub
-    Private Sub makePCC(ByVal fileSrc As String, ByVal sheetName As String)
-        xlApp = New Excel.Application
-        xlWorkBook = xlApp.Workbooks.Open(fileSrc)
-        createSheet(xlWorkBook, sheetName)
-        sheetCount = 2
-        Dim newSheetName As String = sheetName + " (" + sheetCount.ToString() + ")"
-        xlWorkSheet = xlWorkBook.Worksheets(newSheetName)
-        xlWorkSheet.Range("A3").Value = product_Name
-        xlWorkSheet.Range("A5").Value = productNo
-        xlWorkSheet.Range("A5", "C5").Justify()
-        xlWorkSheet.Range("E5").Value = REV_NO
-        Dim ldtPartDetails As New DataTable
-        Dim dr As DataRow
-        ldtPartDetails = gfnSelectQueryDt("SELECT DISTINCT pName, pNo FROM partDetails WHERE pfcName='" + PFC_NAME + "' order by pNo")
-        Dim lpno As New StringBuilder
-        Dim lpName As New StringBuilder
-        For Each dr In ldtPartDetails.Rows
-            lpno.Append(dr("pNo") + ",")
-            lpName.Append(dr("pName") + ",")
-        Next
-        xlWorkSheet.Range("C6").Value = lpName.ToString().Substring(0, lpName.ToString().Length - 1)
-        Dim lrange As Excel.Range = xlWorkSheet.Range("C6")
-        lrange.WrapText = True
-        xlWorkSheet.Range("C7").Value = lpno.ToString().Substring(0, lpno.ToString().Length - 1)
-        xlWorkSheet.Range("Q3").Value = "ASSY"
-        xlWorkSheet.Range("P28").Value = "Issue Date: " + Date.Now.ToString("dd.MM.yy", CultureInfo.InvariantCulture)
-        xlWorkBook.Save()
-        xlWorkBook.Close() : xlApp.Quit()
 
-        ' CLEAN UP. (CLOSE INSTANCES OF EXCEL OBJECTS.)
-        System.Runtime.InteropServices.Marshal.ReleaseComObject(xlApp) : xlApp = Nothing
-        System.Runtime.InteropServices.Marshal.ReleaseComObject(xlWorkBook) : xlWorkBook = Nothing
-        System.Runtime.InteropServices.Marshal.ReleaseComObject(xlWorkSheet) : xlWorkSheet = Nothing
-
-    End Sub
     Private Sub startProcess(ByVal fileSrc As String, ByVal sheetName As String, ByVal startPosition As Integer, ByVal endSheetNo As Integer)
         xlApp = New Excel.Application
         xlWorkBook = xlApp.Workbooks.Open(fileSrc)
@@ -547,9 +613,20 @@ Public Class frmReport
         System.Runtime.InteropServices.Marshal.ReleaseComObject(xlWorkBook) : xlWorkBook = Nothing
         System.Runtime.InteropServices.Marshal.ReleaseComObject(xlWorkSheet) : xlWorkSheet = Nothing
     End Sub
-    Private Sub makeReact(ByVal part_no As String, ByVal part_name As String, ByVal qty As String, ByVal xyz As String, ByVal xs As Excel.Worksheet)
+    Private Sub makeReact(ByVal part_no As String, ByVal part_name As String, ByVal qty As String, ByVal xyz As String, ByVal xs As Excel.Worksheet, Optional ByVal xb As Excel.Workbook = Nothing, Optional ByVal lPno As String = "")
+        If start_pos + 3 >= DEFAULTPQCSENDVALUE Then
+            If start_pos < DEFAULTPQCSENDVALUE Then makeLine(start_pos, DEFAULTPQCSENDVALUE - 1, xs)
+            Dim newSheetName = fnCreateSheet(xb, "P_MRPL", currentSheetNo + 1)
+            xs = xb.Worksheets(newSheetName)
+            saveSettings("currentSheetNo", currentSheetNo + 1)
+            saveSettings("st_pos", DEFAULTPQCSSTARTVALUE)
+            saveSettings("last_pos", DEFAULTPQCSSTARTVALUE)
+            getAllSetting()
+            toBeContinue(xs, lPno)
+        End If
+
         Dim lRange = xs.Range("B" & start_pos, "E" & start_pos + 2)
-        lRange.Select()
+        'lRange.Select()
         With lRange
             .Font.Name = "MS PGothic"
             .Font.Size = 10
@@ -561,7 +638,7 @@ Public Class frmReport
         End With
         makeBorder(lRange, True, True, True, True, True, True)
         lRange = xs.Range("B" & start_pos, "D" & start_pos)
-        lRange.Select()
+        'lRange.Select()
         With lRange
             .HorizontalAlignment = Excel.XlHAlign.xlHAlignLeft
             .VerticalAlignment = Excel.XlHAlign.xlHAlignCenter
@@ -574,7 +651,7 @@ Public Class frmReport
             .MergeCells = True
         End With
         lRange = xs.Range("B" & start_pos + 1, "D" & start_pos + 2)
-        lRange.Select()
+        'lRange.Select()
         With lRange
             .HorizontalAlignment = Excel.XlHAlign.xlHAlignLeft
             .VerticalAlignment = Excel.XlHAlign.xlHAlignCenter
@@ -588,7 +665,7 @@ Public Class frmReport
             .MergeCells = True
         End With
         lRange = xs.Range("E" & start_pos, "E" & start_pos)
-        lRange.Select()
+        'lRange.Select()
         With lRange
             .HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
             .VerticalAlignment = Excel.XlHAlign.xlHAlignCenter
@@ -601,7 +678,7 @@ Public Class frmReport
             .MergeCells = False
         End With
         lRange = xs.Range("E" & start_pos + 1, "E" & start_pos + 2)
-        lRange.Select()
+        'lRange.Select()
         With lRange
             .HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter
             .VerticalAlignment = Excel.XlHAlign.xlHAlignCenter
@@ -621,6 +698,7 @@ Public Class frmReport
         makeLine(start_pos, start_pos + 3, xs, 70)
         start_pos = start_pos + 4
         saveSettings("st_pos", start_pos)
+        getAllSetting()
         'createFlowChart("OP", 10, "MANUAL ASS", xs)
         'fillValues(xs)
 
@@ -667,7 +745,18 @@ Public Class frmReport
             p_lines(k) = lines(k)
         Next
     End Sub
-    Private Sub createFlowChart(ByVal ftype As String, ByVal lpNo As String, ByVal lpName As String, ByVal xs As Excel.Worksheet)
+    Private Sub createFlowChart(ByVal ftype As String, ByVal lpNo As String, ByVal lpName As String, ByVal xs As Excel.Worksheet, Optional ByVal xb As Excel.Workbook = Nothing)
+        If start_pos + 3 >= DEFAULTPQCSENDVALUE Then
+            If start_pos < DEFAULTPQCSENDVALUE Then makeLine(start_pos, DEFAULTPQCSENDVALUE - 1, xs)
+            Dim newSheetName = fnCreateSheet(xb, "P_MRPL", currentSheetNo + 1)
+            xs = xb.Worksheets(newSheetName)
+            saveSettings("currentSheetNo", currentSheetNo + 1)
+            saveSettings("st_pos", DEFAULTPQCSSTARTVALUE)
+            saveSettings("last_pos", DEFAULTPQCSSTARTVALUE)
+            getAllSetting()
+            toBeContinue(xs, lpNo)
+        End If
+
         Dim k As Integer
         For k = 0 To 3
             If lines(k) = 0 Then
@@ -704,7 +793,7 @@ Public Class frmReport
             sc.TextFrame.Characters.Font.ColorIndex = Excel.Constants.xlAutomatic
 
             Dim lRange = xs.Range("B" & start_pos, Chr(74 - k - 2) & start_pos + 2)
-            lRange.Select()
+            'lRange.Select()
             With lRange
                 .HorizontalAlignment = Excel.XlHAlign.xlHAlignRight
                 .VerticalAlignment = Excel.XlHAlign.xlHAlignCenter
@@ -734,7 +823,7 @@ Public Class frmReport
             saveSettings("st_pos", start_pos)
         End If
     End Sub
-    Private Sub toBeContinue(ByVal xs As Excel.Worksheet, Optional ByVal pno As String = "")
+    Private Function toBeContinue(ByVal xs As Excel.Worksheet, Optional ByVal pno As String = "")
         Dim i, j, k As Integer
         start_pos = start_pos + 3
         i = 1
@@ -744,7 +833,7 @@ Public Class frmReport
                     makeBorder(xs.Range(Chr(73 - j - 3) & start_pos & ":" & Chr(73 - j) & start_pos), False, False, False, True, False, False)
                 Next
                 Dim lRange = xs.Range(Chr(73 - k) & start_pos - 1, Chr(73 - k) & start_pos - 1)
-                lRange.Select()
+                'lRange.Select()
                 With lRange
                     .HorizontalAlignment = Excel.XlHAlign.xlHAlignRight
                     .VerticalAlignment = Excel.XlHAlign.xlHAlignCenter
@@ -778,7 +867,9 @@ Public Class frmReport
         Next
         start_pos = start_pos + i
         saveSettings("st_pos", start_pos)
-    End Sub
+        getAllSetting()
+        toBeContinue = i
+    End Function
 
     Private Sub fillValues(ByVal pFullName As String, ByVal xs As Excel.Worksheet)
         Dim i As Integer
@@ -931,7 +1022,6 @@ Public Class frmReport
         createDirectory()
         generatePFC()
         generatePQCS()
-        generatePCC()
         MsgBox("Edited Succesfully")
     End Sub
 
@@ -944,12 +1034,10 @@ Public Class frmReport
             REV_NO = dr("revNo")
         Next
 
-        Dim ldtJoin As New DataTable
-        ldtJoin = gfnSelectQueryDt("SELECT * from QMS")
-        Dim _json As String = GetJson(ldtJoin)
+        'Dim ldtJoin As New DataTable
+        'ldtJoin = gfnSelectQueryDt("SELECT * from QMS")
+        'Dim _json As String = GetJson(ldtJoin)
         generatePQCS()
-
-
 
     End Sub
     Private Function GetJson(ByVal dt As DataTable) As String
