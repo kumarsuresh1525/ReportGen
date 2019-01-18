@@ -30,9 +30,10 @@ Public Class frmReport
     Dim machineJigToolNode As New ArrayList
     Dim processNoNode, processNameNode As String
     Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + fileSource + "';Extended Properties = ""Excel 12.0 Xml;HDR=YES"""
-    Dim PFC_NAME, REV_NO, PartNo As String
+    Dim PFC_NAME, REV_NO, PartNo, RELEASE_TYPE, PRODUCT_RATING As String
     Dim PROCESS_NO As String = ""
     Dim LAST_PROCESS As String
+    Dim PROCESS_NAME As String = ""
     Private Sub getAllSetting()
         start_pos = GetSetting("st_pos", "st_pos", "st_pos")
         last_pos = GetSetting("last_pos", "last_pos", "last_pos")
@@ -57,23 +58,84 @@ Public Class frmReport
             End If
         End If
     End Sub
-    'Private Sub generatePCC()
-    '    Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
-    '    If (Not System.IO.Directory.Exists(desktop + "\Reports\PCC")) Then
-    '        System.IO.Directory.CreateDirectory(desktop + "\Reports\PCC")
-    '    Else
-    '        If (System.IO.File.Exists(desktop + "\Reports\PCC\PCC.xlsx")) Then
-    '            My.Computer.FileSystem.DeleteFile(desktop + "\Reports\PCC\PCC.xlsx")
-    '            My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCC.xlsx",
-    '                                        desktop + "\Reports\PCC\PCC.xlsx")
-    '            makePCC(desktop + "\Reports\PCC\PCC.xlsx", "PCC")
-    '        Else
-    '            My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCC.xlsx",
-    '                                        desktop + "\Reports\PCC\PCC.xlsx")
-    '            makePCC(desktop + "\Reports\PCC\PCC.xlsx", "PCC")
-    '        End If
-    '    End If
-    'End Sub
+    Private Sub PCHART()
+        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        If (Not System.IO.Directory.Exists(desktop + "\Reports\PCHART")) Then
+            System.IO.Directory.CreateDirectory(desktop + "\Reports\PCHART")
+        Else
+            If (System.IO.File.Exists(desktop + "\Reports\PCHART\PCHART.xlsx")) Then
+                My.Computer.FileSystem.DeleteFile(desktop + "\Reports\PCHART\PCHART.xlsx")
+                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCHART.xlsx",
+                                            desktop + "\Reports\PCHART\PCHART.xlsx")
+                startPCHART(desktop + "\Reports\PCHART\PCHART.xlsx", "PCHART")
+            Else
+                My.Computer.FileSystem.CopyFile(Application.StartupPath + "\reference\PCHART.xlsx",
+                                            desktop + "\Reports\PCHART\PCHART.xlsx")
+                startPCHART(desktop + "\Reports\PCHART\PCHART.xlsx", "PCHART")
+            End If
+        End If
+    End Sub
+    Private Sub startPCHART(ByVal fileSrc As String, ByVal sheetName As String)
+
+        Dim ldtPartDetails As New DataTable
+        ldtPartDetails = gfnSelectQueryDt("Select * from partDetails where pfcName='" + PFC_NAME + "'")
+
+        If ldtPartDetails.Rows.Count = 0 Then
+            Exit Sub
+        End If
+
+        xlApp = New Excel.Application
+        xlWorkBook = xlApp.Workbooks.Open(fileSrc)
+        Dim newSheetName = fnCreateSheet(xlWorkBook, sheetName, currentSheetNo)
+        xlWorkSheet = xlWorkBook.Worksheets(newSheetName)
+        Dim text As String = "As per table"
+        xlWorkSheet.Range("B16").Value = text
+        xlWorkSheet.Range("B21").Value = text
+        xlWorkSheet.Range("B25").Value = text
+        xlWorkSheet.Range("C66").Value = "CUSTOMER - " & text
+        xlWorkSheet.Range("M66").Value = "PRODUCT NAME - " & text
+        xlWorkSheet.Range("X66").Value = "PRODUCT NO - " & text
+
+        Dim today = DateTime.Today
+        xlWorkSheet.Range("A7").Value = DateTime.Now.ToString("MMM")
+        xlWorkSheet.Range("B7").Value = today.Year
+        Dim startPartName As Integer = 68
+        Dim dr As DataRow
+        For Each dr In ldtPartDetails.Rows
+            startPartName = startPartName + 2
+            xlWorkSheet.Range("A" & startPartName).Value = dr("partName")
+        Next
+        xlWorkSheet = xlWorkBook.Worksheets("Sheet1")
+        startPartName = 1
+        For Each dr In ldtPartDetails.Rows
+            startPartName = startPartName + 1
+            xlWorkSheet.Range("A" & startPartName).Value = dr("partName")
+            xlWorkSheet.Range("B" & startPartName).Value = dr("productName")
+            xlWorkSheet.Range("C" & startPartName).Value = dr("productNo")
+            xlWorkSheet.Range("D" & startPartName).Value = dr("customer")
+        Next
+        xlWorkSheet.Range("A1:" & "D" & startPartName).CopyPicture(Excel.XlPictureAppearance.xlScreen, Excel.XlCopyPictureFormat.xlPicture)
+        Dim xlRange As Excel.Range
+        xlRange = xlWorkSheet.Range("A1:" & "D" & startPartName)
+        If System.IO.File.Exists(Application.StartupPath & "\pic.jpg") Then
+            My.Computer.FileSystem.DeleteFile(Application.StartupPath & "\pic.jpg")
+        End If
+        Dim oChtobj As Excel.ChartObject = xlWorkSheet.ChartObjects.add(xlRange.Left, xlRange.Top, xlRange.Width, xlRange.Height)
+        Dim oCht As Excel.Chart
+        oCht = oChtobj.Chart
+        oCht.Paste()
+        oCht.Export(Filename:=Application.StartupPath & "\pic.jpg")
+        oChtobj.Delete()
+        xlWorkSheet = xlWorkBook.Worksheets(newSheetName)
+        xlWorkSheet.Shapes.AddPicture(Application.StartupPath & "\pic.jpg", False, True, 0, 0, 500, 500)
+        xlWorkBook.Save()
+        xlWorkBook.Close() : xlApp.Quit()
+
+        ' CLEAN UP. (CLOSE INSTANCES OF EXCEL OBJECTS.)
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(xlApp) : xlApp = Nothing
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(xlWorkBook) : xlWorkBook = Nothing
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(xlWorkSheet) : xlWorkSheet = Nothing
+    End Sub
     Private Sub generatePQCS()
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
         Dim model = "MRPL"
@@ -170,11 +232,11 @@ Public Class frmReport
                             makeReact(rs("partNo"), rs("partName"), rs("qty"), rs("xyz"), xlWorkSheet, xlWorkBook, dr("pNo"))
                         Next
                         createFlowChart(flow_sy_type, Convert.ToInt16(dr("pNo")), dr("pName"), xlWorkSheet, xlWorkBook)
-                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook)
+                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook, dr("pName"))
                         flowChart = True
                     Else
                         'xlWorkSheet = xlWorkBook.Worksheets(sheetName & "_" & currentSheetNo)
-                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook)
+                        fillValuesPQCS(xlWorkSheet, xsProcess, i, j, dr("pNo"), xlWorkBook, dr("pName"))
                     End If
                 End If
                 i = j + 2
@@ -210,7 +272,7 @@ Public Class frmReport
         xlWorkSheet.Name = sheetName + "_" + no.ToString()
         Return sheetName + "_" + no.ToString()
     End Function
-    Private Sub fillValuesPQCS(ByVal xsPQCS As Excel.Worksheet, ByVal xsPQCSDB As Excel.Worksheet, ByVal i As Integer, ByVal j As Integer, ByVal pNo As Integer, ByVal xw As Excel.Workbook)
+    Private Sub fillValuesPQCS(ByVal xsPQCS As Excel.Worksheet, ByVal xsPQCSDB As Excel.Worksheet, ByVal i As Integer, ByVal j As Integer, ByVal pNo As Integer, ByVal xw As Excel.Workbook, ByVal pName As String)
         getAllSetting()
         Dim defaultSheetName As String = "P_MRPL"
         If last_pos + j - i + 1 >= DEFAULTPQCSENDVALUE Then
@@ -237,8 +299,22 @@ Public Class frmReport
             End If
         End If
         xsPQCS = xw.Worksheets(defaultSheetName & "_" & currentSheetNo)
+        If RELEASE_TYPE = "Prototype" Then
+            xsPQCS.Shapes.Item("Check Box 1").OLEFormat.Object.Value = True
+            xsPQCS.Shapes.Item("Check Box 2").OLEFormat.Object.Value = False
+            xsPQCS.Shapes.Item("Check Box 3").OLEFormat.Object.Value = False
+        ElseIf RELEASE_TYPE = "Prelaunch" Then
+            xsPQCS.Shapes.Item("Check Box 1").OLEFormat.Object.Value = False
+            xsPQCS.Shapes.Item("Check Box 2").OLEFormat.Object.Value = False
+            xsPQCS.Shapes.Item("Check Box 3").OLEFormat.Object.Value = True
+        ElseIf RELEASE_TYPE = "Production" Then
+            xsPQCS.Shapes.Item("Check Box 1").OLEFormat.Object.Value = False
+            xsPQCS.Shapes.Item("Check Box 2").OLEFormat.Object.Value = True
+            xsPQCS.Shapes.Item("Check Box 3").OLEFormat.Object.Value = False
+        End If
         xsPQCSDB.Range("O" & i & ":AC" & j).Copy(xsPQCS.Range("P" & last_pos))
         If xsPQCSDB.Range("AA" & last_pos).Value = "KAKOTORA " Then
+            lblCurrentReport.Text = "KAKOTORA"
             createKakoTora()
         End If
         last_pos = last_pos + j - i + 2
@@ -252,11 +328,12 @@ Public Class frmReport
         getAllSetting()
         If xsPQCSDB.Range("AF" & i).Value = 1 Then
             'PCC Here
-            genPCC(xsPQCSDB.Range("AH" & i).Value, "", "", "", xsPQCSDB.Range("AI" & i).Value, xsPQCSDB.Range("AJ" & i).Value, xsPQCSDB.Range("AG" & i).Value, 1, xw, pNo)
+            genPCC(xsPQCSDB.Range("AH" & i).Value, "", "", "", xsPQCSDB.Range("AI" & i).Value, xsPQCSDB.Range("AJ" & i).Value, xsPQCSDB.Range("AG" & i).Value, 1, xw, pNo, pName)
+            lblCurrentReport.Text = "PCC"
         End If
 
     End Sub
-    Private Sub genPCC(TXT1 As String, TXT2 As String, TXT3 As String, TXT4 As String, TXT5 As String, TXT6 As String, Optional PO As Integer = 1, Optional MER As Integer = 1, Optional xw As Excel.Workbook = Nothing, Optional lPno As Integer = 0)
+    Private Sub genPCC(TXT1 As String, TXT2 As String, TXT3 As String, TXT4 As String, TXT5 As String, TXT6 As String, Optional PO As Integer = 1, Optional MER As Integer = 1, Optional xw As Excel.Workbook = Nothing, Optional lPno As Integer = 0, Optional pName As String = "")
         Dim pcc_file_name As String
         Dim current_sheet As Integer
         Dim BASE As Integer, offset_val As Integer
@@ -273,9 +350,13 @@ Public Class frmReport
                     xsPCC = xw.Worksheets("PCC_" & currentSheetNo)
                     xsPCC.Range("C7").Value = result
                     PROCESS_NO = ""
+                    result = String.Join(",", PROCESS_NAME.Split(",").Distinct().ToArray())
+                    xsPCC.Range("C6").Value = result
                 End If
                 Dim sheetName = fnCreateSheet(xw, "PCC", current_sheet + 1)
                 xsPCC = xw.Worksheets(sheetName)
+                xsPCC.Range("C7").Value = lPno
+                xsPCC.Range("C6").Value = pName
                 xsInfo.Cells(12 + PO, 7).Value = current_sheet + 1
                 current_sheet = xsInfo.Cells(12 + PO, 7).Value
                 xsInfo.Cells(9, 6).Value = xsInfo.Cells(12 + PO, 7).Value
@@ -292,6 +373,7 @@ Public Class frmReport
             pcc_file_name = "PCC_" & current_sheet
         End If
         PROCESS_NO = PROCESS_NO & lPno & ","
+        PROCESS_NAME = PROCESS_NAME & pName & ","
         BASE = xsInfo.Cells(12 + PO, 5).Value
         offset_val = xsInfo.Cells(12 + PO, 6).Value
         xsInfo.Cells(12 + PO, 6).Value = xsInfo.Cells(12 + PO, 6).Value + 1
@@ -320,18 +402,7 @@ Public Class frmReport
         xsPCC.Range("S1").Value = current_sheet
         xsPCC.Range("Q3").Value = "ASSY"
         xsPCC.Range("D1").Value = "MRPL"
-        'xsPCC.Cells(3, 1).Value = Sheets("BOM").Cells(1, 3).Value
-        'xsPCC.Cells(5, 1).Value = Sheets("BOM").Cells(2, 3).Value
-        Dim lflagPCC As Boolean
-        'If pcc_file_name = "PCC_2" And mflagPCC = True And lflagPCC = False Then
-        '    mflagPCC = False
-        '    lflagPCC = True
-        'End If
-        'If mflagPCC = False Then
-        '    Worksheets(pcc_file_name).Cells(6, 3).Value = process_name & "," & Worksheets(pcc_file_name).Cells(6, 3).Value
-        '    Worksheets(pcc_file_name).Cells(7, 3).Value = Worksheets(pcc_file_name).Cells(7, 3).Value & "," & txtProcessNo.Text
-        '    mflagPCC = True
-        'End If
+
     End Sub
     Private Sub createDirectory()
         Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
@@ -1020,8 +1091,19 @@ Public Class frmReport
 
     Private Sub cmdReport_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles cmdReport.Click
         createDirectory()
+        statusBar.Value = statusBar.Value + 10
+        lblCurrentReport.Text = "PFC"
         generatePFC()
+        statusBar.Value = statusBar.Value + 20
+        lblCurrentReport.Text = "PQCS"
         generatePQCS()
+        statusBar.Value = statusBar.Value + 50
+        'lblCurrentReport.Text = "OGS"
+        'createOGS()
+        statusBar.Value = statusBar.Value + 70
+        lblCurrentReport.Text = "PCHART"
+        PCHART()
+        statusBar.Value = statusBar.Value + 100
         MsgBox("Edited Succesfully")
     End Sub
 
@@ -1032,25 +1114,28 @@ Public Class frmReport
         Dim dr As DataRow
         For Each dr In ldtRevNo.Rows
             REV_NO = dr("revNo")
+            RELEASE_TYPE = dr("releasingPhase")
+            PRODUCT_RATING = dr("productRating")
         Next
 
         'Dim ldtJoin As New DataTable
         'ldtJoin = gfnSelectQueryDt("SELECT * from QMS")
         'Dim _json As String = GetJson(ldtJoin)
-        generatePQCS()
-
+        'generatePQCS()
+        'PCHART()
+        MsgBox("Completed")
     End Sub
-    Private Function GetJson(ByVal dt As DataTable) As String
-        'Dim Jserializer = New System.Web.Script.Serialization()
-        Dim rowsList As New List(Of Dictionary(Of String, Object))()
-        Dim row As Dictionary(Of String, Object)
-        For Each dr As DataRow In dt.Rows
-            row = New Dictionary(Of String, Object)()
-            For Each col As DataColumn In dt.Columns
-                row.Add(col.ColumnName, dr(col))
-            Next
-            rowsList.Add(row)
-        Next
-        Return JsonConvert.SerializeObject(rowsList)
-    End Function
+    'Private Function GetJson(ByVal dt As DataTable) As String
+    '    'Dim Jserializer = New System.Web.Script.Serialization()
+    '    Dim rowsList As New List(Of Dictionary(Of String, Object))()
+    '    Dim row As Dictionary(Of String, Object)
+    '    For Each dr As DataRow In dt.Rows
+    '        row = New Dictionary(Of String, Object)()
+    '        For Each col As DataColumn In dt.Columns
+    '            row.Add(col.ColumnName, dr(col))
+    '        Next
+    '        rowsList.Add(row)
+    '    Next
+    '    Return JsonConvert.SerializeObject(rowsList)
+    'End Function
 End Class

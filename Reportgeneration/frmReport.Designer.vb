@@ -23,10 +23,11 @@ Partial Class frmReport
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.GroupBox1 = New System.Windows.Forms.GroupBox()
-        Me.cmdReport = New System.Windows.Forms.Button()
-        Me.btnBack = New System.Windows.Forms.Button()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.statusBar = New System.Windows.Forms.ProgressBar()
+        Me.cmdReport = New System.Windows.Forms.Button()
+        Me.btnBack = New System.Windows.Forms.Button()
+        Me.lblCurrentReport = New System.Windows.Forms.Label()
         Me.GroupBox1.SuspendLayout()
         Me.GroupBox2.SuspendLayout()
         Me.SuspendLayout()
@@ -41,6 +42,24 @@ Partial Class frmReport
         Me.GroupBox1.Size = New System.Drawing.Size(1311, 699)
         Me.GroupBox1.TabIndex = 1
         Me.GroupBox1.TabStop = False
+        '
+        'GroupBox2
+        '
+        Me.GroupBox2.Controls.Add(Me.lblCurrentReport)
+        Me.GroupBox2.Controls.Add(Me.statusBar)
+        Me.GroupBox2.Location = New System.Drawing.Point(16, 631)
+        Me.GroupBox2.Name = "GroupBox2"
+        Me.GroupBox2.Size = New System.Drawing.Size(576, 52)
+        Me.GroupBox2.TabIndex = 31
+        Me.GroupBox2.TabStop = False
+        Me.GroupBox2.Text = "Status"
+        '
+        'statusBar
+        '
+        Me.statusBar.Location = New System.Drawing.Point(15, 18)
+        Me.statusBar.Name = "statusBar"
+        Me.statusBar.Size = New System.Drawing.Size(362, 23)
+        Me.statusBar.TabIndex = 0
         '
         'cmdReport
         '
@@ -63,22 +82,14 @@ Partial Class frmReport
         Me.btnBack.Text = "Back"
         Me.btnBack.UseVisualStyleBackColor = False
         '
-        'GroupBox2
+        'lblCurrentReport
         '
-        Me.GroupBox2.Controls.Add(Me.statusBar)
-        Me.GroupBox2.Location = New System.Drawing.Point(16, 631)
-        Me.GroupBox2.Name = "GroupBox2"
-        Me.GroupBox2.Size = New System.Drawing.Size(576, 52)
-        Me.GroupBox2.TabIndex = 31
-        Me.GroupBox2.TabStop = False
-        Me.GroupBox2.Text = "Status"
-        '
-        'statusBar
-        '
-        Me.statusBar.Location = New System.Drawing.Point(15, 18)
-        Me.statusBar.Name = "statusBar"
-        Me.statusBar.Size = New System.Drawing.Size(362, 23)
-        Me.statusBar.TabIndex = 0
+        Me.lblCurrentReport.AutoSize = True
+        Me.lblCurrentReport.Location = New System.Drawing.Point(402, 27)
+        Me.lblCurrentReport.Name = "lblCurrentReport"
+        Me.lblCurrentReport.Size = New System.Drawing.Size(83, 13)
+        Me.lblCurrentReport.TabIndex = 1
+        Me.lblCurrentReport.Text = "lblCurrentReport"
         '
         'frmReport
         '
@@ -91,6 +102,7 @@ Partial Class frmReport
         Me.WindowState = System.Windows.Forms.FormWindowState.Maximized
         Me.GroupBox1.ResumeLayout(False)
         Me.GroupBox2.ResumeLayout(False)
+        Me.GroupBox2.PerformLayout()
         Me.ResumeLayout(False)
 
     End Sub
@@ -99,4 +111,5 @@ Partial Class frmReport
     Friend WithEvents cmdReport As System.Windows.Forms.Button
     Friend WithEvents GroupBox2 As System.Windows.Forms.GroupBox
     Friend WithEvents statusBar As System.Windows.Forms.ProgressBar
+    Friend WithEvents lblCurrentReport As Label
 End Class

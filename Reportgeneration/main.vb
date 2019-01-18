@@ -15,28 +15,8 @@ Public Class main
         'End If
     End Sub
 
-    Private Sub pSet_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles pSet.Click
-        frmProcess.Show()
-        Me.Hide()
-    End Sub
-
-    Private Sub Button1_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button1.Click
-        frmMakePFC.Show()
-        Me.Hide()
-    End Sub
-
     Private Sub btnExit_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnExit.Click
         End
-    End Sub
-
-    Private Sub pqcsSet_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles pqcsSet.Click
-        frmQMP.Show()
-        Me.Hide()
-    End Sub
-
-    Private Sub btnQMS_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnQMS.Click
-        frmQMS.Show()
-        Me.Hide()
     End Sub
 
     Private Sub cboSelectCustomer_SelectedIndexChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles cboSelectCustomer.SelectedIndexChanged
@@ -96,6 +76,7 @@ Public Class main
                     Next
                 End If
             End If
+
         End If
     End Sub
 
@@ -137,5 +118,23 @@ Public Class main
             MsgBox("Product rating/Releasing Phase can't be blank")
         End If
 
+    End Sub
+
+    Private Sub cboPFC_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboPFC.SelectedIndexChanged
+        If cboPFC.Text <> "" Then
+            Dim ldtRevision As New DataTable
+            ldtRevision = gfnSelectQueryDt("SELECT * FROM revisionNumber where pfcName='" + cboPFC.Text + "' and model='" + cboSelectCustomer.Text + "'")
+            If ldtRevision.Rows.Count = 0 Then
+                Exit Sub
+
+            Else
+                Dim dr As DataRow
+                For Each dr In ldtRevision.Rows
+                    cboReleasingPhase.Text = dr("releasingPhase")
+                    cboProductRating.Text = dr("productRating")
+                Next
+
+            End If
+        End If
     End Sub
 End Class

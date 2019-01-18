@@ -19,42 +19,38 @@ Public Class login
             txtPassword.SelectionLength = Len(txtPassword.Text)
             Exit Sub
         End If
+        Dim ldtAdmin As New DataTable
+        ldtAdmin = gfnSelectQueryDt("SELECT * FROM admin where userName='" & (txtUserName.Text) & "' and password='" & (txtPassword.Text) & "'")
+        If ldtAdmin.Rows.Count = 0 Then
+            MsgBox("Wrong User name/ password")
+            Exit Sub
 
-        qry = "SELECT * FROM admin where userName='" & (txtUserName.Text) & "' and password='" & (txtPassword.Text) & "'"
-        If MakeConnection() = True Then
-            Try
-                Cmd = New OleDbCommand(qry, Con)
-                Dim ldtParts As New DataTable
-                ldtParts = gfnSelectQueryDt("SELECT * FROM partDetails")
-                If ldtParts.Rows.Count = 0 Then
-                    MessageBox.Show("No PFC available Please create at least 1 PFC")
+        Else
+            Dim ldtParts As New DataTable
+            ldtParts = gfnSelectQueryDt("SELECT * FROM partDetails")
+            If ldtParts.Rows.Count = 0 Then
+                MessageBox.Show("No PFC available Please create at least 1 PFC")
+                main.cmdReport.Text = "Create PFC"
+                main.lblPFC.Visible = False
+                main.cboPFC.Visible = False
+                main.Show()
+                Me.Close()
+            Else
+                Dim result As Integer = MessageBox.Show("Press Yes to create new PFC and No for generate report from PFC", "Alert", MessageBoxButtons.YesNo)
+                If result = DialogResult.Yes Then
                     main.cmdReport.Text = "Create PFC"
                     main.lblPFC.Visible = False
                     main.cboPFC.Visible = False
                     main.Show()
                     Me.Close()
                 Else
-                    Dim result As Integer = MessageBox.Show("Press Yes to create new PFC and No for generate report from PFC", "caption", MessageBoxButtons.YesNo)
-                    If result = DialogResult.Yes Then
-                        main.cmdReport.Text = "Create PFC"
-                        main.lblPFC.Visible = False
-                        main.cboPFC.Visible = False
-                        main.Show()
-                        Me.Close()
-                    Else
-                        main.cmdReport.Text = "Generate Report from PFC"
-                        main.lblPFC.Visible = True
-                        main.cboPFC.Visible = True
-                        main.Show()
-                        Me.Close()
-                    End If
+                    main.cmdReport.Text = "Generate Report from PFC"
+                    main.lblPFC.Visible = True
+                    main.cboPFC.Visible = True
+                    main.Show()
+                    Me.Close()
                 End If
-            Catch ex As Exception
-                MsgBox(ex.Message)
-            End Try
-        End If
-        If Not MakeConnectionExcel() Then
-            Application.Exit()
+            End If
         End If
     End Sub
 
